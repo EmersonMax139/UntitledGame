@@ -1,5 +1,8 @@
 import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
+import { config } from '../main'; 
+
+const PLATFORMS_MAX: number = 5;
 
 export class Game extends Scene
 {
@@ -9,11 +12,23 @@ export class Game extends Scene
     player: any;
     platforms: any;
     cursors: any;
+    HEIGHT: any = config.width;
+    WIDTH: any = config.height;
 
     constructor ()
     {
         super('Game');
     }
+
+    createRandomPlatforms(num: number) {
+        for (let i = 0; i < num; i++) {
+            let x = 200 + Math.floor(Math.random() * 400); // 200 < x < 400
+            let y = 500 - (Math.floor(Math.random() * 500));  // y < 500
+
+            this.platforms.create(x, y, 'ground').setScale(1.5);
+        }    
+    }
+
     create ()
     {
         // Setup
@@ -24,34 +39,31 @@ export class Game extends Scene
         // Platform logic
         this.platforms = this.physics.add.staticGroup();
 
-        this.platforms.create(400, 568, 'ground').setScale(2).refreshBody();
-
-        this.platforms.create(600, 400, 'ground');
-        this.platforms.create(50, 250, 'ground');
-        this.platforms.create(750, 220, 'ground');
+        this.platforms.create(400, 600, 'ground').setScale(2).refreshBody();
+        this.createRandomPlatforms(PLATFORMS_MAX)
 
         // Player logic
-        this.player = this.physics.add.sprite(100, 450, 'dude');
+        this.player = this.physics.add.sprite(100, 450, 'fighter');
 
         this.player.setBounce(0.2);
         this.player.setCollideWorldBounds(true);
 
         this.anims.create({
             key: 'left',
-            frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
+            frames: this.anims.generateFrameNumbers('fighter', { start: 0, end: 3 }),
             frameRate: 10,
             repeat: -1
         });
 
         this.anims.create({
             key: 'turn',
-            frames: [ { key: 'dude', frame: 4 } ],
+            frames: [ { key: 'fighter', frame: 4 } ],
             frameRate: 20
         });
 
         this.anims.create({
             key: 'right',
-            frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
+            frames: this.anims.generateFrameNumbers('fighter', { start: 5, end: 8 }),
             frameRate: 10,
             repeat: -1
         });
