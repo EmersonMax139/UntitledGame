@@ -2,6 +2,7 @@ import { EventBus } from '../EventBus';
 import { Scene } from 'phaser';
 import { config } from '../main'; 
 import { BulletGroup } from '../objects/Bullet';
+import { PlatformGenerator, DEFAULT_PLATFORM_CONFIG } from '../objects/PlatformGenerator';
 
 
 // Platform generation configuration
@@ -21,6 +22,7 @@ export class Game extends Scene
     camera: Phaser.Cameras.Scene2D.Camera;
     background: Phaser.GameObjects.Image;
     gameText: Phaser.GameObjects.Text;
+    platformGenerator: PlatformGenerator;
     player: any;
     platforms: any;
     cursors: any;
@@ -36,72 +38,6 @@ export class Game extends Scene
         super('Game');
     }
 
-    createRandomPlatforms() {
-        // Track placed platforms to check for gaps
-        const placedPlatforms: { x: number; y: number; width: number; height: number }[] = [];
-        
-        // Number of platforms to generate
-        let attemptsRemaining = PLATFORM_CONFIG.MAX_PLATFORMS * 2; // Allow extra attempts for finding valid positions
-        let platformsCreated = 0;
-        
-        // Available area for platforms (above base platform)
-        const baseY = this.HEIGHT - PLATFORM_CONFIG.BASE_HEIGHT;
-        const minY = 100; // Keep platforms from being too high
-        
-        while (attemptsRemaining > 0 && platformsCreated < PLATFORM_CONFIG.MAX_PLATFORMS) {
-            attemptsRemaining--;
-            
-            // Random scale for variety
-            const scale = PLATFORM_CONFIG.MIN_SCALE + 
-                (Math.random() * (PLATFORM_CONFIG.MAX_SCALE - PLATFORM_CONFIG.MIN_SCALE));
-            
-            // Calculate platform dimensions
-            const platformWidth = PLATFORM_CONFIG.PLATFORM_WIDTH * scale;
-            const platformHeight = PLATFORM_CONFIG.PLATFORM_HEIGHT * scale;
-            
-            // Random position
-            const x = platformWidth/2 + Math.random() * (this.WIDTH - platformWidth);
-            const y = minY + Math.random() * (baseY - minY - platformHeight);
-            
-            // Check if this position would be valid
-            if (this.isValidPlatformPosition(x, y, platformWidth, platformHeight, placedPlatforms)) {
-                // Create the platform
-                const platform = this.platforms.create(x, y, 'ground').setScale(scale).refreshBody();
-                
-                // Track this platform
-                placedPlatforms.push({
-                    x: x,
-                    y: y,
-                    width: platformWidth,
-                    height: platformHeight
-                });
-                
-                platformsCreated++;
-            }
-        }
-    }
-
-    isValidPlatformPosition(x: number, y: number, width: number, height: number, 
-        placedPlatforms: { x: number; y: number; width: number; height: number }[]): boolean {
-            // Check for minimum distance from all existing platforms
-            for (const platform of placedPlatforms) {
-            // Calculate center-to-center distances
-            const horizontalDistance = Math.abs(x - platform.x);
-            const verticalDistance = Math.abs(y - platform.y);
-
-            // Calculate minimum allowed distances (half of each platform width + gap)
-            const minHorizontalDistance = (width/2 + platform.width/2) + PLATFORM_CONFIG.MIN_HORIZONTAL_GAP;
-            const minVerticalDistance = (height/2 + platform.height/2) + PLATFORM_CONFIG.MIN_VERTICAL_GAP;
-
-            // If both distances are less than minimum, there's a conflict
-            if (horizontalDistance < minHorizontalDistance && verticalDistance < minVerticalDistance) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     create ()
     {
         // Setup
@@ -109,15 +45,26 @@ export class Game extends Scene
 
         this.background = this.add.image(512, 384, 'background');
 
-        // Platform logic
-        this.platforms = this.physics.add.staticGroup();
-
-        // base platform
-        this.platforms.create(this.WIDTH / 2 , this.HEIGHT - PLATFORM_CONFIG.BASE_HEIGHT, 'ground')
-            .setScale(2)
-            .refreshBody();
+       // Platform logic
+       this.platforms = this.physics.add.staticGroup();
         
-        this.createRandomPlatforms()
+       // Initialize platform generator
+       this.platformGenerator = new PlatformGenerator(
+           this, 
+           this.platforms, 
+           {
+               ...DEFAULT_PLATFORM_CONFIG,
+               // You can override specific config values here if needed
+               // MIN_HORIZONTAL_GAP: 120,
+               // MAX_PLATFORMS: 6,
+           }
+       );
+       
+       // Create base platform
+       this.platformGenerator.createBasePlatform();
+           
+       // Create random platforms
+       this.platformGenerator.createRandomPlatforms();
 
         // Player logic
         this.player = this.physics.add.sprite(100, 450, 'fighter');
